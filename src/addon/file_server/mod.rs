@@ -140,16 +140,16 @@ impl<'a> FileServer {
                         let mut filepath = dir.path();
 
                         filepath.push("index.html");
-                        if let Ok(file) = tokio::fs::File::open(&filepath).await {
-                            return make_http_file_response(
-                                File {
-                                    path: filepath,
-                                    metadata: file.metadata().await?,
-                                    file,
-                                },
-                                CacheControlDirective::MaxAge(2500),
-                            )
-                            .await;
+                        if filepath.exists() {
+                            let redirect = HttpResponseBuilder::new()
+                                .status(StatusCode::SEE_OTHER)
+                                .header("Location", format!("{}/{}", &req_path, "index.html"))
+                                .body(Body::empty());
+                            // Fallback to rendering the contents of the directory if the redirect
+                            // response can't be built for any reason.
+                            if let Ok(redirect) = redirect {
+                                return Ok(redirect);
+                            }
                         }
                     }
 
